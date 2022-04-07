@@ -11,7 +11,7 @@ import java.util.UUID;
 public class VoucherService {
     private final VoucherRepository voucherRepository;
 
-    public VoucherService(@Qualifier("memory") VoucherRepository voucherRepository) {
+    public VoucherService(VoucherRepository voucherRepository) {
         this.voucherRepository = voucherRepository;
     }
 

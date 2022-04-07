@@ -18,17 +18,21 @@ import java.util.UUID;
 
 public class OrderTester {
     public static void main(String[] args) {
-        var applicationContext = new AnnotationConfigApplicationContext(AppConfiguration.class);
-        var orderProperties = applicationContext.getBean(OrderProperties.class);
-        System.out.println(MessageFormat.format("version -> {0}", orderProperties.getVersion()));
-        System.out.println(MessageFormat.format("moa -> {0}", orderProperties.getMinimumOrderAmount()));
-        System.out.println(MessageFormat.format("sv -> {0}", orderProperties.getSupportVendors()));
-        System.out.println(MessageFormat.format("d -> {0}", orderProperties.getDescription()));
-//        var environment = applicationContext.getEnvironment();
-//        applicationContext.register(AppConfiguration.class);
-//
-//        environment.setActiveProfiles("local");
-//        applicationContext.refresh();
+        var applicationContext = new AnnotationConfigApplicationContext();
+
+
+        var environment = applicationContext.getEnvironment();
+        applicationContext.register(AppConfiguration.class);
+
+        environment.setActiveProfiles("local");
+        applicationContext.refresh();
+
+        //var orderProperties = applicationContext.getBean(OrderProperties.class);
+//        System.out.println(MessageFormat.format("version -> {0}", orderProperties.getVersion()));
+//        System.out.println(MessageFormat.format("moa -> {0}", orderProperties.getMinimumOrderAmount()));
+//        System.out.println(MessageFormat.format("sv -> {0}", orderProperties.getSupportVendors()));
+//        System.out.println(MessageFormat.format("d -> {0}", orderProperties.getDescription()));
+
 
 //        var version = environment.getProperty("kdt.version");
 //        var minimumOrderAmount = environment.getProperty("kdt.minimum-order-amount", Integer.class);
@@ -40,8 +44,8 @@ public class OrderTester {
 //        System.out.println(MessageFormat.format("supportVendors -> {0}", supportVendors));
 
         var customerId = UUID.randomUUID();
-        var voucherRepository = BeanFactoryAnnotationUtils.qualifiedBeanOfType(applicationContext.getBeanFactory(), VoucherRepository.class, "memory");
-        //var voucherRepository = applicationContext.getBean(VoucherRepository.class);
+        //var voucherRepository = BeanFactoryAnnotationUtils.qualifiedBeanOfType(applicationContext.getBeanFactory(), VoucherRepository.class, "memory");
+        var voucherRepository = applicationContext.getBean(VoucherRepository.class);
         var voucher = voucherRepository.insert(new FixedAmountVoucher(UUID.randomUUID(), 10L));
 
         System.out.println(MessageFormat.format("is Jdbc Repo -> {0}", voucherRepository instanceof JdbcVoucherRepository));
