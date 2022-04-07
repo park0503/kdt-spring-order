@@ -11,21 +11,27 @@ import org.springframework.beans.factory.annotation.BeanFactoryAnnotationUtils;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.util.Assert;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.nio.channels.Channels;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class OrderTester {
-    public static void main(String[] args) {
-        var applicationContext = new AnnotationConfigApplicationContext();
+    public static void main(String[] args) throws IOException {
+        var applicationContext = new AnnotationConfigApplicationContext(AppConfiguration.class);
 
 
-        var environment = applicationContext.getEnvironment();
-        applicationContext.register(AppConfiguration.class);
-
-        environment.setActiveProfiles("local");
-        applicationContext.refresh();
+//        var environment = applicationContext.getEnvironment();
+//        applicationContext.register(AppConfiguration.class);
+//
+//        environment.setActiveProfiles("local");
+//        applicationContext.refresh();
 
         //var orderProperties = applicationContext.getBean(OrderProperties.class);
 //        System.out.println(MessageFormat.format("version -> {0}", orderProperties.getVersion()));
@@ -42,6 +48,22 @@ public class OrderTester {
 //        System.out.println(version);
 //        System.out.println(minimumOrderAmount);
 //        System.out.println(MessageFormat.format("supportVendors -> {0}", supportVendors));
+
+        var resource = applicationContext.getResource("classpath:application.yaml");
+        var resource2 = applicationContext.getResource("file:sample.txt");
+        var resource3 = applicationContext.getResource(("https://stackoverflow.com/"));
+        System.out.println(MessageFormat.format("Resource -> {0}", resource3.getClass().getCanonicalName()));
+
+        var readableByteChannel = Channels.newChannel(resource3.getURL().openStream());
+        var bufferReader = new BufferedReader(Channels.newReader(readableByteChannel, StandardCharsets.UTF_8));
+        var contents = bufferReader.lines().collect(Collectors.joining("\n"));
+        System.out.println(contents);
+
+
+        var yaml = resource.getFile();
+        var file = resource2.getFile();
+        var strings = Files.readAllLines(file.toPath());
+        System.out.println(strings.stream().reduce("", (a, b) -> a + "\n" + b));
 
         var customerId = UUID.randomUUID();
         //var voucherRepository = BeanFactoryAnnotationUtils.qualifiedBeanOfType(applicationContext.getBeanFactory(), VoucherRepository.class, "memory");
