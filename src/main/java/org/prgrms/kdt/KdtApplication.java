@@ -1,5 +1,6 @@
 package org.prgrms.kdt;
 
+import org.prgrms.kdt.configuration.YamlPropertiesFactory;
 import org.prgrms.kdt.order.OrderItem;
 import org.prgrms.kdt.order.OrderProperties;
 import org.prgrms.kdt.order.OrderService;
@@ -12,6 +13,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.util.Assert;
 
 import java.text.MessageFormat;
