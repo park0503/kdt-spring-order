@@ -13,6 +13,8 @@ public interface CustomerRepository {
     //위에 두 개를 묶어서 Customer save(Customer customer) 로 처리하기도 함.
     //없으면 만들고 있는거면 업데이트. JPA에서 기본제공
 
+    int count();
+
     List<Customer> findAll();
 
     Optional<Customer> findById(UUID customerId);

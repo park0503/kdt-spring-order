@@ -7,6 +7,7 @@ import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
 import javax.sql.DataSource;
@@ -40,6 +41,11 @@ class CustomerJdbcRepositoryTest {
             dataSource.setMinimumIdle(100);
             return dataSource;
         }
+
+        @Bean
+        public JdbcTemplate jdbcTemplate(DataSource dataSource) {
+            return new JdbcTemplate(dataSource);
+        }
     }
 
     @Autowired
@@ -67,7 +73,6 @@ class CustomerJdbcRepositoryTest {
     @Order(2)
     public void testInsert() {
         customerJdbcRepository.insert(newCustomer);
-
         Optional<Customer> retrivedCustomer = customerJdbcRepository.findById(newCustomer.getCustomerId());
         assertThat(retrivedCustomer.isEmpty(), is(false));
         assertThat(retrivedCustomer.get(), samePropertyValuesAs(newCustomer));
