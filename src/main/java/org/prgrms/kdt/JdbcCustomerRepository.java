@@ -1,10 +1,12 @@
 package org.prgrms.kdt;
 
+import org.prgrms.kdt.customer.Customer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.sql.*;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -13,7 +15,8 @@ public class JdbcCustomerRepository {
 
     private static final Logger logger = LoggerFactory.getLogger(JdbcCustomerRepository.class);
     private final String SELECT_ALL_SQL = "select * from customers;";
-    private final String INSERT_SQL = "insert into customers(customer_id, name, email) values (UUID_TO_BIN(?), ?, ?);";
+    private final String INSERT_SQL = "insert into customers(customer_id, name, email) values (UNHEX(REPLACE(?, '-', '')), ?, ?);";
+    private final String UPDATE_BY_ID_SQL = "update customers set name = ? where customer_id = UUID_TO_BIN(?)";
     private final String DELETE_ALL_SQL = "delete from customers";
 
     public List<UUID> findAllIds() {
@@ -65,6 +68,41 @@ public class JdbcCustomerRepository {
         return 0;
     }
 
+    public void transactionTest(Customer customer) {
+        String updateNameSql = "update customers set name = ? where customer_id = UUID_TO_BIN(?);";
+        String updateEmailSql = "update customers set email = ? where customer_id = UUID_TO_BIN(?);";
+
+        Connection connection = null;
+        try {
+            connection = DriverManager.getConnection("jdbc:mysql://localhost/order_mgmt", "root", "1q2w3e4r!");
+            try(
+                    var updateNameStatement = connection.prepareStatement(updateNameSql);
+                    var updateEmailStatement = connection.prepareStatement(updateEmailSql);
+            )
+            {
+                connection.setAutoCommit(false);
+                updateNameStatement.setString(1, customer.getName());
+                updateNameStatement.setBytes(2, customer.getCustomerId().toString().getBytes());
+                updateNameStatement.executeUpdate();
+
+                updateEmailStatement.setString(1, customer.getEmail());
+                updateEmailStatement.setBytes(2, customer.getCustomerId().toString().getBytes());
+                updateEmailStatement.executeUpdate();
+                connection.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            if (connection != null) {
+                try {
+                    connection.rollback();
+                    connection.close();
+                }catch (SQLException throwable) {
+                    throwable.printStackTrace();
+                }
+            }
+            throw new RuntimeException(e);
+        }
+    }
+
     static UUID toUUID(byte[] bytes) {
         ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
         return new UUID(byteBuffer.getLong(), byteBuffer.getLong());
@@ -73,15 +111,17 @@ public class JdbcCustomerRepository {
     public static void main(String[] args) throws SQLException {
         var customerRepository = new JdbcCustomerRepository();
 
-        var count = customerRepository.deleteAllCustomers();
-        logger.info("deleted count -> {}", count);
+        customerRepository.transactionTest(new Customer(UUID.fromString("a6795260-d833-4140-ace5-42ba06778d69"), "too_ramp", "too_ramp@gmail.com", LocalDateTime.now().withNano(0)));
 
-        var customerId = UUID.randomUUID();
-        logger.info("created customerId -> {}", customerId);
-        logger.info("created UUID version -> {}", customerId.version());
-
-        customerRepository.insertCustomer(customerId,"new-user", "new-user@gmail.com");
-        customerRepository.findAllIds().forEach(v -> logger.info("Found customerId: {} and version: {}", v, v.version()));
+//        var count = customerRepository.deleteAllCustomers();
+//        logger.info("deleted count -> {}", count);
+//
+        //var customerId = UUID.randomUUID();
+//        logger.info("created customerId -> {}", customerId);
+//        logger.info("created UUID version -> {}", customerId.version());
+//
+        //customerRepository.insertCustomer(customerId,"new-user", "new-user@gmail.com");
+//        customerRepository.findAllIds().forEach(v -> logger.info("Found customerId: {} and version: {}", v, v.version()));
 
     }
 }

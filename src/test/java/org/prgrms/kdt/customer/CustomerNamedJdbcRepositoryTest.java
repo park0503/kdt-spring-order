@@ -9,40 +9,35 @@ import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.BadSqlGrammarException;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabase;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
 import javax.sql.DataSource;
-
+import java.text.MessageFormat;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
-import static com.wix.mysql.config.Charset.UTF8;
-import static org.hamcrest.MatcherAssert.*;
-import static org.hamcrest.Matchers.*;
-import static org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType.H2;
-
 import static com.wix.mysql.EmbeddedMysql.anEmbeddedMysql;
 import static com.wix.mysql.ScriptResolver.classPathScript;
-import static com.wix.mysql.distribution.Version.v5_7_latest;
+import static com.wix.mysql.config.Charset.UTF8;
 import static com.wix.mysql.config.MysqldConfig.aMysqldConfig;
-import static com.wix.mysql.EmbeddedMysql.anEmbeddedMysql;
+import static com.wix.mysql.distribution.Version.v5_7_latest;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 @SpringJUnitConfig
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-class CustomerJdbcRepositoryTest {
-
+class CustomerNamedJdbcRepositoryTest {
     @Configuration
     @ComponentScan(
             basePackages = {"org.prgrms.kdt.customer"}
     )
     static class Config {
-
-
         @Bean
         public DataSource dataSource() {
 //            return new EmbeddedDatabaseBuilder()
@@ -67,10 +62,15 @@ class CustomerJdbcRepositoryTest {
         public JdbcTemplate jdbcTemplate(DataSource dataSource) {
             return new JdbcTemplate(dataSource);
         }
+
+        @Bean
+        public NamedParameterJdbcTemplate namedParameterJdbcTemplate(JdbcTemplate jdbcTemplate) {
+            return new NamedParameterJdbcTemplate(jdbcTemplate);
+        }
     }
 
     @Autowired
-    CustomerJdbcRepository customerJdbcRepository;
+    CustomerNamedJdbcRepository customerJdbcRepository;
 
     @Autowired
     DataSource dataSource;
@@ -109,6 +109,13 @@ class CustomerJdbcRepositoryTest {
     @DisplayName("고객을 추가할 수 있다.")
     @Order(2)
     public void testInsert() {
+
+        try {
+            customerJdbcRepository.insert(newCustomer);
+        } catch (BadSqlGrammarException e) {
+            System.out.println(MessageFormat.format("SQLException Error Code -> {0}", e.getSQLException().getErrorCode()));
+        }
+
         customerJdbcRepository.insert(newCustomer);
         Optional<Customer> retrivedCustomer = customerJdbcRepository.findById(newCustomer.getCustomerId());
         assertThat(retrivedCustomer.isEmpty(), is(false));

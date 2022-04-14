@@ -5,22 +5,21 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import javax.sql.DataSource;
 import java.nio.ByteBuffer;
 import java.sql.Timestamp;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Repository
-public class CustomerJdbcRepository implements CustomerRepository{
+public class CustomerNamedJdbcRepository implements CustomerRepository {
     private static final Logger logger = LoggerFactory.getLogger(CustomerJdbcRepository.class);
 
     private final DataSource dataSource;
 
-    private final JdbcTemplate jdbcTemplate;
+    private final NamedParameterJdbcTemplate jdbcTemplate;
 
     private static final RowMapper<Customer> customerRowMapper = (resultSet, rowNum) -> {
         var customerId = toUUID(resultSet.getBytes("customer_id"));
@@ -31,19 +30,25 @@ public class CustomerJdbcRepository implements CustomerRepository{
         return new Customer(customerId, customerName, email, lastLoginAt, createdAt);
     };
 
-    public CustomerJdbcRepository(DataSource dataSource, JdbcTemplate jdbcTemplate1) {
+    private Map<String, Object> toParamMap(Customer customer) {
+        return new HashMap<String, Object>() {{
+            put("customerId", customer.getCustomerId().toString().getBytes());
+            put("name", customer.getName());
+            put("email", customer.getEmail());
+            put("createdAt", Timestamp.valueOf(customer.getCreatedAt()));
+            put("lastLoginAt", customer.getLastLoginAt() != null ? Timestamp.valueOf(customer.getLastLoginAt()) : null);
+        }};
+    }
+
+    public CustomerNamedJdbcRepository(DataSource dataSource, NamedParameterJdbcTemplate jdbcTemplate1) {
         this.dataSource = dataSource;
         this.jdbcTemplate = jdbcTemplate1;
     }
 
     @Override
     public Customer insert(Customer customer) {
-        int update = jdbcTemplate.update("insert into customers(customer_id, name, email, created_at) values (UNHEX(REPLACE(?, '-', '')), ?, ?, ?);",
-                customer.getCustomerId().toString().getBytes(),
-                customer.getName(),
-                customer.getEmail(),
-                Timestamp.valueOf(customer.getCreatedAt())
-        );
+        var paramMap = toParamMap(customer);
+        var update = jdbcTemplate.update("insert into customers(customer_id, name, email, created_sat) values (UNHEX(REPLACE(:customerId, '-', '')), :name, :email, :createdAt);", paramMap);
         if (update != 1) {
             throw new RuntimeException("Noting was inserted");
         }
@@ -52,11 +57,8 @@ public class CustomerJdbcRepository implements CustomerRepository{
 
     @Override
     public Customer update(Customer customer) {
-        int update = jdbcTemplate.update("update customers set name = ?, last_login_at = ? where customer_id = UNHEX(REPLACE(?, '-', ''));",
-                customer.getName(),
-                customer.getLastLoginAt() != null ? Timestamp.valueOf(customer.getLastLoginAt()) : null,
-                customer.getCustomerId().toString().getBytes()
-        );
+        var paramMap = toParamMap(customer);
+        int update = jdbcTemplate.update("update customers set name = :name, last_login_at = :lastLoginAt where customer_id = UNHEX(REPLACE(:customerId, '-', ''));",paramMap);
         if (update < 1) {
             throw new RuntimeException("Noting was inserted");
         }
@@ -65,7 +67,7 @@ public class CustomerJdbcRepository implements CustomerRepository{
 
     @Override
     public int count() {
-        return jdbcTemplate.queryForObject("select count(*) from customers;", Integer.class);
+        return jdbcTemplate.queryForObject("select count(*) from customers;", Collections.emptyMap(),Integer.class);
     }
 
     @Override
@@ -76,7 +78,7 @@ public class CustomerJdbcRepository implements CustomerRepository{
     @Override
     public Optional<Customer> findByName(String name) {
         try {
-            return Optional.ofNullable(jdbcTemplate.queryForObject("select * from customers where name=?;", customerRowMapper, name));
+            return Optional.ofNullable(jdbcTemplate.queryForObject("select * from customers where name=:name;", Collections.singletonMap("name", name), customerRowMapper));
         } catch (EmptyResultDataAccessException e) {
             logger.error("Got empty result", e);
             return Optional.empty();
@@ -86,7 +88,7 @@ public class CustomerJdbcRepository implements CustomerRepository{
     @Override
     public Optional<Customer> findById(UUID customerId) {
         try {
-            return Optional.ofNullable(jdbcTemplate.queryForObject("select * from customers where customer_id=UNHEX(REPLACE(?, '-', ''));", customerRowMapper, customerId.toString().getBytes()));
+            return Optional.ofNullable(jdbcTemplate.queryForObject("select * from customers where customer_id=UNHEX(REPLACE(:customerId, '-', ''));",Collections.singletonMap("customerId", customerId.toString().getBytes()), customerRowMapper));
         } catch (EmptyResultDataAccessException e) {
             logger.error("Got empty result", e);
             return Optional.empty();
@@ -96,7 +98,7 @@ public class CustomerJdbcRepository implements CustomerRepository{
     @Override
     public Optional<Customer> findByEmail(String email) {
         try {
-            return Optional.ofNullable(jdbcTemplate.queryForObject("select * from customers where email=?;", customerRowMapper, email));
+            return Optional.ofNullable(jdbcTemplate.queryForObject("select * from customers where email=:email;", Collections.singletonMap("email", email), customerRowMapper));
         } catch (EmptyResultDataAccessException e) {
             logger.error("Got empty result", e);
             return Optional.empty();
@@ -105,7 +107,7 @@ public class CustomerJdbcRepository implements CustomerRepository{
 
     @Override
     public void deleteAll() {
-        jdbcTemplate.update("delete from customers;");
+        jdbcTemplate.update("delete from customers;", Collections.emptyMap());
     }
 
     private static UUID toUUID(byte[] bytes) {
