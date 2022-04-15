@@ -2,11 +2,16 @@ package org.prgrms.kdt.customer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
+import org.springframework.transaction.support.TransactionCallbackWithoutResult;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.sql.DataSource;
 import java.nio.ByteBuffer;
@@ -17,9 +22,9 @@ import java.util.*;
 public class CustomerNamedJdbcRepository implements CustomerRepository {
     private static final Logger logger = LoggerFactory.getLogger(CustomerJdbcRepository.class);
 
-    private final DataSource dataSource;
-
     private final NamedParameterJdbcTemplate jdbcTemplate;
+
+//    private final PlatformTransactionManager transactionManager;
 
     private static final RowMapper<Customer> customerRowMapper = (resultSet, rowNum) -> {
         var customerId = toUUID(resultSet.getBytes("customer_id"));
@@ -40,15 +45,14 @@ public class CustomerNamedJdbcRepository implements CustomerRepository {
         }};
     }
 
-    public CustomerNamedJdbcRepository(DataSource dataSource, NamedParameterJdbcTemplate jdbcTemplate1) {
-        this.dataSource = dataSource;
+    public CustomerNamedJdbcRepository(NamedParameterJdbcTemplate jdbcTemplate1) {
         this.jdbcTemplate = jdbcTemplate1;
     }
 
     @Override
     public Customer insert(Customer customer) {
         var paramMap = toParamMap(customer);
-        var update = jdbcTemplate.update("insert into customers(customer_id, name, email, created_sat) values (UNHEX(REPLACE(:customerId, '-', '')), :name, :email, :createdAt);", paramMap);
+        var update = jdbcTemplate.update("insert into customers(customer_id, name, email, created_at) values (UNHEX(REPLACE(:customerId, '-', '')), :name, :email, :createdAt);", paramMap);
         if (update != 1) {
             throw new RuntimeException("Noting was inserted");
         }
@@ -104,6 +108,16 @@ public class CustomerNamedJdbcRepository implements CustomerRepository {
             return Optional.empty();
         }
     }
+
+//    public void testTransaction(Customer customer) {
+//        transactionTemplate.execute(new TransactionCallbackWithoutResult() {
+//            @Override
+//            protected void doInTransactionWithoutResult(TransactionStatus status) {
+//                jdbcTemplate.update("update customers set name = :name where customer_id = UNHEX(REPLACE(:customerId, '-', ''));", toParamMap(customer));
+//                jdbcTemplate.update("update customers set email = :email where customer_id = UNHEX(REPLACE(:customerId, '-', ''));", toParamMap(customer));
+//            }
+//        });
+//    }
 
     @Override
     public void deleteAll() {
