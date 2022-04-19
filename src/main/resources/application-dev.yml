@@ -1,0 +1,12 @@
+kdt:
+  version: "v1.0"
+  minimum-order-amount: 1
+  support-vendors:
+    - dev-a
+    - dev-b
+    - dev-c
+    - dev-d
+  description: |-
+    line1 dev world
+    line2 xxdevxx
+    line3 dev
