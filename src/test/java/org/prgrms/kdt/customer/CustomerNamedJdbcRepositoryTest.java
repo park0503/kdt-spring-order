@@ -44,13 +44,6 @@ class CustomerNamedJdbcRepositoryTest {
     static class Config {
         @Bean
         public DataSource dataSource() {
-//            return new EmbeddedDatabaseBuilder()
-//                    .generateUniqueName(true)
-//                    .setType(H2)
-//                    .setScriptEncoding("UTF-8")
-//                    .ignoreFailedDrops(true)
-//                    .addScript("schema.sql")
-//                    .build();
             HikariDataSource dataSource = DataSourceBuilder.create()
                     .url("jdbc:mysql://localhost:2215/test-order_mgmt")
                     .username("test")
