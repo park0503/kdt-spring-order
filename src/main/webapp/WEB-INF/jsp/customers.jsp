@@ -11,6 +11,7 @@
     </head>
     <body class="container-fluid">
         <h1>KDT Spring Web</h1>
+        <img src="<c:url value="/resources/profile.jpg" />" class="img-fluid">
         <p>The time on the server is ${serverTime}</p>
         <h2>Customer Table</h2>
         <table class="table table-striped table-hover">
@@ -33,13 +34,5 @@
             </c:forEach>
             </tbody>
         </table>
-<%--        <c:forEach var="i" begin="0" end="10" step="1">${i}<br></c:forEach>--%>
-        <%--    <%--%>
-<%--        for (int i = 0; i < 10; i++) {--%>
-<%--            %>--%>
-<%--        <%= i %><br>--%>
-<%--        <%--%>
-<%--        }--%>
-<%--    %>--%>
     </body>
 </html>

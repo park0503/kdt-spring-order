@@ -1,6 +1,8 @@
 package org.prgrms.kdt.customer;
 
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.ModelAndView;
@@ -18,9 +20,12 @@ public class CustomerController {
         this.customerService = customerService;
     }
 
-    @RequestMapping(value = "/customers", method = RequestMethod.GET)
-    public ModelAndView findCustomers() {
+    //@RequestMapping(value = "/customers", method = RequestMethod.GET)
+    @GetMapping("/customers")
+    public String findCustomers(Model model) {
         List<Customer> allCustomers = customerService.getAllCustomers();
-        return new ModelAndView("customers", Map.of("serverTime", LocalDateTime.now(), "customers", allCustomers));
+        model.addAttribute("serverTime", LocalDateTime.now());
+        model.addAttribute("customers", allCustomers);
+        return "views/customers";
     }
 }
