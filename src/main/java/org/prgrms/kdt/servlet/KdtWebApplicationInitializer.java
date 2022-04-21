@@ -1,5 +1,7 @@
 package org.prgrms.kdt.servlet;
 
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.zaxxer.hikari.HikariDataSource;
 import org.prgrms.kdt.customer.CustomerController;
 import org.slf4j.Logger;
@@ -12,19 +14,21 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.FilterType;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.http.converter.xml.MarshallingHttpMessageConverter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.oxm.xstream.XStreamMarshaller;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.web.WebApplicationInitializer;
 import org.springframework.web.context.ContextLoaderListener;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import org.springframework.web.servlet.DispatcherServlet;
-import org.springframework.web.servlet.config.annotation.EnableWebMvc;
-import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
-import org.springframework.web.servlet.config.annotation.ViewResolverRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.config.annotation.*;
 import org.springframework.web.servlet.resource.EncodedResourceResolver;
 import org.thymeleaf.spring5.SpringTemplateEngine;
 import org.thymeleaf.spring5.templateresolver.SpringResourceTemplateResolver;
@@ -34,6 +38,9 @@ import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRegistration;
 import javax.sql.DataSource;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 public class KdtWebApplicationInitializer implements WebApplicationInitializer {
     private static final Logger logger = LoggerFactory.getLogger(KdtWebApplicationInitializer.class);
@@ -104,6 +111,29 @@ public class KdtWebApplicationInitializer implements WebApplicationInitializer {
         public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
             this.applicationContext = applicationContext;
         }
+
+        @Override
+        public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
+            var messageConverter = new MarshallingHttpMessageConverter();
+            var xStreamMarshaller = new XStreamMarshaller();
+            messageConverter.setMarshaller(xStreamMarshaller);
+            messageConverter.setUnmarshaller(xStreamMarshaller);
+
+            converters.add(0, messageConverter);
+
+            var javaTimeModule = new JavaTimeModule();
+            javaTimeModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DateTimeFormatter.ISO_DATE_TIME));
+            var modules = Jackson2ObjectMapperBuilder.json().modules(javaTimeModule);
+
+            converters.add(1, new MappingJackson2HttpMessageConverter(modules.build()));
+        }
+
+        @Override
+        public void addCorsMappings(CorsRegistry registry) {
+            registry.addMapping("/api/**")
+                    .allowedMethods("GET", "POST")
+                    .allowedOrigins("*");
+        }
     }
 
     @EnableTransactionManagement
@@ -142,7 +172,7 @@ public class KdtWebApplicationInitializer implements WebApplicationInitializer {
     }
 
     @Override
-    public void onStartup(ServletContext servletContext) throws ServletException {
+    public void onStartup(ServletContext servletContext) {
         logger.info("Starting Server...");
 
         var rootApplicationContext = new AnnotationConfigWebApplicationContext();
